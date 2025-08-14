@@ -1,0 +1,28 @@
+ai-customer-success-program/
+├── README.md
+├── docs/
+│   ├── program-overview.md
+│   ├── implementation-guide.md
+│   ├── roi-analysis.md
+│   └── case-studies.md
+├── scripts/
+│   ├── customer-scoring.py
+│   ├── engagement-tracker.js
+│   └── referral-automation.py
+├── templates/
+│   ├── customer-interview-template.md
+│   ├── case-study-template.md
+│   ├── referral-email-templates.md
+│   └── success-metrics-dashboard.md
+├── data/
+│   ├── sample-customer-data.csv
+│   ├── engagement-metrics.json
+│   └── roi-calculations.xlsx
+├── config/
+│   ├── crm-integration.yaml
+│   ├── automation-rules.json
+│   └── scoring-parameters.json
+└── presentations/
+    ├── executive-summary.pptx
+    ├── sales-team-training.pptx
+    └── customer-testimonial-deck.pptx
