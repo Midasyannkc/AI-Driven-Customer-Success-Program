@@ -1,0 +1,174 @@
+# CRM Integration Configuration for AI-Driven Customer Success Program
+
+crm_platform: "salesforce"  # Options: salesforce, hubspot, pipedrive
+
+# Salesforce Configuration
+salesforce:
+  api_version: "v54.0"
+  base_url: "https://your-org.salesforce.com"
+  client_id: "${SALESFORCE_CLIENT_ID}"
+  client_secret: "${SALESFORCE_CLIENT_SECRET}"
+  username: "${SALESFORCE_USERNAME}"
+  password: "${SALESFORCE_PASSWORD}"
+  security_token: "${SALESFORCE_SECURITY_TOKEN}"
+
+# Custom Objects and Fields
+custom_objects:
+  advocacy_program:
+    object_name: "Customer_Advocacy__c"
+    fields:
+      - name: "Customer__c"
+        type: "lookup"
+        relationship: "Account"
+      - name: "Advocacy_Score__c"
+        type: "number"
+        precision: 5
+        scale: 2
+      - name: "Program_Status__c"
+        type: "picklist"
+        values: ["Identified", "Contacted", "Interviewed", "Active Advocate", "Inactive"]
+      - name: "Interview_Date__c"
+        type: "date"
+      - name: "Case_Study_Status__c"
+        type: "picklist"
+        values: ["Not Started", "In Progress", "Customer Review", "Approved", "Published"]
+      - name: "Referral_Count__c"
+        type: "number"
+      - name: "Referral_Value__c"
+        type: "currency"
+      - name: "Last_Engagement_Date__c"
+        type: "datetime"
+
+  referral_tracking:
+    object_name: "Customer_Referral__c"
+    fields:
+      - name: "Referring_Customer__c"
+        type: "lookup"
+        relationship: "Account"
+      - name: "Referred_Prospect__c"
+        type: "lookup"
+        relationship: "Lead"
+      - name: "Referral_Date__c"
+        type: "date"
+      - name: "Referral_Status__c"
+        type: "picklist"
+        values: ["New", "Contacted", "Qualified", "Opportunity Created", "Closed Won", "Closed Lost"]
+      - name: "Expected_Value__c"
+        type: "currency"
+      - name: "Actual_Value__c"
+        type: "currency"
+
+# Workflow Rules
+workflows:
+  advocacy_scoring_update:
+    trigger: "Customer_Advocacy__c"
+    conditions:
+      - "ISCHANGED(Advocacy_Score__c)"
+    actions:
+      - type: "email_alert"
+        template: "High_Advocacy_Score_Alert"
+        recipients: ["account_owner", "customer_success_manager"]
+      - type: "task_creation"
+        subject: "High advocacy score detected - Schedule outreach"
+        priority: "High"
+
+  referral_conversion_tracking:
+    trigger: "Opportunity"
+    conditions:
+      - "AND(ISCHANGED(StageName), TEXT(StageName) = 'Closed Won', NOT(ISBLANK(Referral_Source__c)))"
+    actions:
+      - type: "field_update"
+        target_field: "Customer_Referral__c.Actual_Value__c"
+        value: "Amount"
+      - type: "email_alert"
+        template: "Referral_Conversion_Success"
+
+# Reports and Dashboards
+reports:
+  advocacy_pipeline_report:
+    type: "tabular"
+    columns:
+      - "Account.Name"
+      - "Customer_Advocacy__c.Advocacy_Score__c"
+      - "Customer_Advocacy__c.Program_Status__c"
+      - "Customer_Advocacy__c.Referral_Count__c"
+      - "Customer_Advocacy__c.Referral_Value__c"
+    filters:
+      - field: "Customer_Advocacy__c.Program_Status__c"
+        operator: "not_equal"
+        value: "Inactive"
+
+  referral_roi_report:
+    type: "summary"
+    group_by: "Customer_Advocacy__c.Referring_Customer__c"
+    columns:
+      - "Customer_Referral__c.Referral_Count__c"
+      - "SUM(Customer_Referral__c.Actual_Value__c)"
+      - "AVG(Customer_Referral__c.Days_to_Close__c)"
+
+dashboard_components:
+  advocacy_program_metrics:
+    - component_type: "gauge"
+      title: "Active Advocates"
+      metric: "COUNT(Customer_Advocacy__c)"
+      filter: "Program_Status__c = 'Active Advocate'"
+    
+    - component_type: "funnel"
+      title: "Advocacy Funnel"
+      stages:
+        - "Identified"
+        - "Contacted"  
+        - "Interviewed"
+        - "Active Advocate"
+    
+    - component_type: "line_chart"
+      title: "Monthly Referral Value"
+      x_axis: "CALENDAR_MONTH(Customer_Referral__c.Referral_Date__c)"
+      y_axis: "SUM(Customer_Referral__c.Actual_Value__c)"
+
+# Automation Rules
+automation:
+  scoring_update_frequency: "daily"
+  engagement_reminder_cadence: "weekly"
+  inactive_advocate_review: "monthly"
+  
+  email_templates:
+    advocacy_invitation:
+      subject: "Exclusive Opportunity: Share Your Success Story"
+      sender: "customer.success@company.com"
+      template_id: "ADV_INVITATION_001"
+    
+    referral_request:
+      subject: "Help a Peer Organization Achieve Similar Success"
+      sender: "account.manager@company.com"
+      template_id: "REF_REQUEST_001"
+    
+    thank_you_follow_up:
+      subject: "Thank You for Your Partnership and Advocacy"
+      sender: "executive.team@company.com"
+      template_id: "THANK_YOU_001"
+
+# Integration Endpoints
+api_endpoints:
+  customer_scoring_webhook: "/api/v1/advocacy/scoring-update"
+  referral_tracking_webhook: "/api/v1/advocacy/referral-created"
+  engagement_sync_endpoint: "/api/v1/advocacy/engagement-sync"
+
+# Security and Compliance
+security:
+  data_encryption: true
+  audit_logging: true
+  gdpr_compliance: true
+  data_retention_days: 2555  # 7 years
+  
+permissions:
+  advocacy_program_manager:
+    - read: ["Customer_Advocacy__c", "Customer_Referral__c"]
+    - create: ["Customer_Advocacy__c", "Customer_Referral__c"]
+    - edit: ["Customer_Advocacy__c", "Customer_Referral__c"]
+    - delete: ["Customer_Referral__c"]
+  
+  sales_rep:
+    - read: ["Customer_Advocacy__c", "Customer_Referral__c"]
+    - create: ["Customer_Referral__c"]
+    - edit: ["Customer_Referral__c.Referral_Status__c"]
